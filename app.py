@@ -15,10 +15,9 @@ class ImageViewer:
         self.canvas = tk.Canvas(root, width=1000, height=500, bg="#ddd")
         self.canvas.pack(pady=10)
 
-        # Botão carregar/salvar
+        # Controle carregar/salvar
         control_frame = tk.Frame(root)
         control_frame.pack()
-
         tk.Button(control_frame, text="Carregar Imagem", command=self.load_image).grid(row=0, column=0, padx=5)
         tk.Button(control_frame, text="Salvar Imagem", command=self.save_image).grid(row=0, column=1, padx=5)
 
@@ -38,8 +37,24 @@ class ImageViewer:
         for i, (label, var) in enumerate(self.filters.items()):
             tk.Checkbutton(filter_frame, text=label, variable=var).grid(row=i//2, column=i%2, sticky='w')
 
-        # Botão aplicar filtros
-        tk.Button(root, text="Aplicar Filtros Selecionados", command=self.apply_selected_filters).pack(pady=10)
+        # Transformações
+        transform_frame = tk.LabelFrame(root, text="Transformações", padx=10, pady=10)
+        transform_frame.pack(pady=10)
+
+        tk.Label(transform_frame, text="Rotacionar (graus):").grid(row=0, column=0, sticky='e')
+        self.rotate_entry = tk.Entry(transform_frame, width=5)
+        self.rotate_entry.grid(row=0, column=1)
+
+        tk.Label(transform_frame, text="Redimensionar Largura:").grid(row=1, column=0, sticky='e')
+        self.resize_width_entry = tk.Entry(transform_frame, width=5)
+        self.resize_width_entry.grid(row=1, column=1)
+
+        tk.Label(transform_frame, text="Altura:").grid(row=1, column=2, sticky='e')
+        self.resize_height_entry = tk.Entry(transform_frame, width=5)
+        self.resize_height_entry.grid(row=1, column=3)
+
+        # Botão aplicar tudo
+        tk.Button(root, text="Aplicar Filtros e Transformações", command=self.apply_all).pack(pady=10)
 
     def load_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Imagens", "*.jpg *.jpeg *.png")])
@@ -66,18 +81,36 @@ class ImageViewer:
         self.canvas.delete("all")
         img1_resized = ImageTk.PhotoImage(self.resize_image(img1))
         img2_resized = ImageTk.PhotoImage(self.resize_image(img2))
-        self.tk_img1 = img1_resized  # evitar garbage collection
+        self.tk_img1 = img1_resized
         self.tk_img2 = img2_resized
         self.canvas.create_image(0, 0, anchor=tk.NW, image=img1_resized)
         self.canvas.create_image(500, 0, anchor=tk.NW, image=img2_resized)
 
-    def apply_selected_filters(self):
+    def apply_all(self):
         if not self.image:
             messagebox.showerror("Erro", "Carregue uma imagem primeiro.")
             return
 
         img = self.image.copy()
 
+        # Aplica rotação
+        try:
+            angle = float(self.rotate_entry.get())
+            if angle != 0:
+                img = img.rotate(angle, expand=True)
+        except ValueError:
+            pass  # Se o campo estiver vazio ou inválido, ignora
+
+        # Aplica redimensionamento
+        try:
+            width = int(self.resize_width_entry.get())
+            height = int(self.resize_height_entry.get())
+            if width > 0 and height > 0:
+                img = img.resize((width, height), Image.Resampling.LANCZOS)
+        except ValueError:
+            pass
+
+        # Filtros
         if self.filters["Escala de Cinza"].get():
             img = img.convert("L")
 
